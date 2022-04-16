@@ -9,63 +9,77 @@ class Sensor:
         self.D = D
         self.opening = opening
         self.range = range
-        self.track_data = []
+        self.tracks_observed = []
     
-    def point_incoming(self, point):
-        if 1 == 1:
-            self.track_data.append(point)
-        else:
-            self.track_data.append([])
+    def add_point_to_track(self, tid, point):
+        tid_found = False
+        for track in self.tracks_observed:
+            if track["id"] == tid:
+                tid_found = True
+                track["pos"].append(point)
+        if not tid_found:
+            self.tracks_observed.append({ "id": tid, "pos": [ point ] })
+    
+    def points_incoming(self, trackobserver):
+        for point in trackobserver:
+            self.add_point_to_track(point["id"], point["pos"])
 
 class Central:
 
-    def __init__(self, width, height, t):
-        self.t = t
-        self.width = width
-        self.height = height
-        self.track = self.fake_track_gen(width, height, t)
-        self.position_counter = 0
-        self.current_position = self.track[self.position_counter]
-        
-    def fake_track_gen(self, width, height, t):
-        track = []
-        track.append([56, 29])
-        track.append([56, 30])
-        track.append([55, 31])
-        track.append([55, 32])
-        track.append([54, 33])
-        track.append([53, 34])
-        track.append([52, 35])
-        track.append([51, 36])
-        track.append([51, 37])
-        track.append([50, 38])
-        return track
+    def __init__(self):
+        self.tracks = []
+        self.timestamp = 0
+        self.trackobserver = []
+    
+    def add_track(self, track):
+        self.tracks.append(track)
     
     def generate_next(self):
-        self.position_counter = self.position_counter + 1
-        self.current_position = self.track[self.position_counter]
+        self.trackobserver = []
+        for track in self.tracks:
+            if 0 <= self.timestamp - track["start_time"] <= len(track["pos"]):
+                self.trackobserver.append({ "id": track["id"], "pos": track["pos"][self.timestamp-track["start_time"]] })
+        self.timestamp = self.timestamp + 1
     
     def send_to_sensors(self, sensors):
         for s in sensors:
-            s.point_incoming([self.current_position])
+            s.points_incoming(self.trackobserver)
+
+
+if __name__ == "__main__":
+
+    s1 = Sensor(1, 1, 1, 1, 1)
+    central = Central()
     
-# https://stackoverflow.com/questions/13430231/how-i-can-get-cartesian-coordinate-system-in-matplotlib
-# Lo scopo del programma è fare che?
-# La traccia non la generiamo random ma facciamo che si disegna a mano
-# Idea implementativa: creiamo una finestra Tkinter e leggiamo periodicamente la posizione del mouse
-# mentre è cliccato
-# Poi abbiamo il main che fa
-# for k in range(600):
-#   ...
-#   central.generate_next()
-#   central.send_to_sensors()
-#   sensor.step()
+    track_0 = { "id": 0, "pos": [ [56, 29], 
+                                  [56, 30],
+                                  [55, 31],
+                                  [55, 32],
+                                  [54, 33],
+                                  [53, 34],
+                                  [52, 35],
+                                  [51, 36],
+                                  [51, 37],
+                                  [50, 38]  ], "start_time": 0 }
+    
+    track_1 = { "id": 1, "pos": [ [56, 29], 
+                                  [56, 30],
+                                  [55, 31],
+                                  [55, 32],
+                                  [54, 33],
+                                  [53, 34],
+                                  [52, 35],
+                                  [51, 36],
+                                  [51, 37],
+                                  [50, 38]  ], "start_time": 1 }
+    
+    central.add_track(track_0)
+    central.add_track(track_1)
 
-s1 = Sensor(1, 1, 1, 1, 1)
-central = Central(100, 100, 10)
+    central.generate_next()
+    central.send_to_sensors([s1])
+    central.generate_next()
+    central.send_to_sensors([s1])
 
-central.send_to_sensors([s1])
-central.generate_next()
-central.send_to_sensors([s1])
-
-print(s1.track_data)
+    print(central.trackobserver)
+    print(s1.tracks_observed)
