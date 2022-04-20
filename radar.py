@@ -1,6 +1,3 @@
-import numpy
-from random import randint
-
 class Sensor:
 
     def __init__(self, t, R, D, opening, range):
@@ -9,37 +6,34 @@ class Sensor:
         self.D = D
         self.opening = opening
         self.range = range
-        self.tracks_observed = []
+        self.tracks_observed = {}
     
-    def add_point_to_track(self, tid, point):
-        tid_found = False
-        for track in self.tracks_observed:
-            if track["id"] == tid:
-                tid_found = True
-                track["pos"].append(point)
-        if not tid_found:
-            self.tracks_observed.append({ "id": tid, "pos": [ point ] })
+    def add_point_to_track(self, track_id, point):
+        if track_id not in self.tracks_observed.keys():
+            self.tracks_observed[track_id] = { "pos": [ point ] }
+        else:
+            self.tracks_observed[track_id]["pos"].append(point)
     
     def points_incoming(self, trackobserver):
-        for point in trackobserver:
-            self.add_point_to_track(point["id"], point["pos"])
+        for track_id in trackobserver.keys():
+            self.add_point_to_track(track_id, trackobserver[track_id]["pos"])
 
 class Central:
 
     def __init__(self):
         self.tracks = []
-        self.timestamp = 0
-        self.trackobserver = []
+        self.timestep = 0
+        self.trackobserver = {}
     
     def add_track(self, track):
         self.tracks.append(track)
     
     def generate_next(self):
-        self.trackobserver = []
+        self.trackobserver = {}
         for track in self.tracks:
-            if 0 <= self.timestamp - track["start_time"] <= len(track["pos"]):
-                self.trackobserver.append({ "id": track["id"], "pos": track["pos"][self.timestamp-track["start_time"]] })
-        self.timestamp = self.timestamp + 1
+            if 0 <= self.timestep - track["start_time"] <= len(track["pos"]):
+                self.trackobserver[track["id"]] = { "pos": track["pos"][self.timestep-track["start_time"]] }
+        self.timestep = self.timestep + 1
     
     def send_to_sensors(self, sensors):
         for s in sensors:
