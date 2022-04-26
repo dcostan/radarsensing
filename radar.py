@@ -1,3 +1,5 @@
+import math
+
 class Sensor:
 
     def __init__(self, t, R, D, opening, range):
@@ -13,6 +15,17 @@ class Sensor:
             self.tracks_observed[track_id] = { "pos": [ point ] }
         else:
             self.tracks_observed[track_id]["pos"].append(point)
+    
+    def is_point_in_fov(self, point):
+        m1 = math.tan( ( 90 - self.opening ) * math.pi / 180 )
+        q1 = self.t[1] - m1 * self.t[0]
+        first_straight_condition = ( point[1] > m1 * point[0] + q1 )
+        
+        m2 = math.tan( ( 90 + self.opening ) * math.pi / 180 )
+        q2 = self.t[1] - m2 * self.t[0]
+        second_straight_condition = ( point[1] > m2 * point[0] + q2 )
+        
+        return second_straight_condition
     
     def points_incoming(self, trackobserver):
         for track_id in trackobserver.keys():
@@ -42,7 +55,7 @@ class Central:
 
 if __name__ == "__main__":
 
-    s1 = Sensor(1, 1, 1, 1, 1)
+    s1 = Sensor([ 20, 10 ], 0, 0, 45, 2)
     central = Central()
     
     track_0 = { "id": 0, "pos": [ [56, 29], 
@@ -77,3 +90,4 @@ if __name__ == "__main__":
 
     print(central.trackobserver)
     print(s1.tracks_observed)
+    print(s1.is_point_in_fov([20,20]))
