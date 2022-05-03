@@ -1,3 +1,4 @@
+import numpy as np
 import math
 
 class Sensor:
@@ -18,18 +19,24 @@ class Sensor:
     
     def is_point_in_fov(self, point):
         m1 = math.tan( ( 90 - self.opening ) * math.pi / 180 )
-        q1 = self.t[1] - m1 * self.t[0]
-        first_straight_condition = ( point[1] > m1 * point[0] + q1 )
+        first_straight_condition = ( point.flat[1] > m1 * point.flat[0] )
         
         m2 = math.tan( ( 90 + self.opening ) * math.pi / 180 )
-        q2 = self.t[1] - m2 * self.t[0]
-        second_straight_condition = ( point[1] > m2 * point[0] + q2 )
-        
-        return second_straight_condition
+        second_straight_condition = ( point.flat[1] > m2 * point.flat[0] )
+
+        return first_straight_condition and second_straight_condition
+
+    def change_coordinates(self, P_):
+        RP_ = np.matmul(self.R, P_)
+        P = np.add(RP_, [self.t])
+        return P
     
     def points_incoming(self, trackobserver):
         for track_id in trackobserver.keys():
-            self.add_point_to_track(track_id, trackobserver[track_id]["pos"])
+            P = self.change_coordinates(trackobserver[track_id]["pos"])
+            if self.is_point_in_fov(P):
+                self.add_point_to_track(track_id, P)
+            
 
 class Central:
 
@@ -45,7 +52,7 @@ class Central:
         self.trackobserver = {}
         for track in self.tracks:
             if 0 <= self.timestep - track["start_time"] <= len(track["pos"]):
-                self.trackobserver[track["id"]] = { "pos": track["pos"][self.timestep-track["start_time"]] }
+                self.trackobserver[track["id"]] = { "pos": np.array(track["pos"][self.timestep-track["start_time"]]) }
         self.timestep = self.timestep + 1
     
     def send_to_sensors(self, sensors):
@@ -55,11 +62,11 @@ class Central:
 
 if __name__ == "__main__":
 
-    s1 = Sensor([ 20, 10 ], 0, 0, 45, 2)
+    s1 = Sensor(np.array([-2, 2]), np.matrix([[0, 1], [-1, 0]]), 0, 45, 2)
     central = Central()
     
-    track_0 = { "id": 0, "pos": [ [56, 29], 
-                                  [56, 30],
+    track_0 = { "id": 0, "pos": [ [1, 3], 
+                                  [1, 2],
                                   [55, 31],
                                   [55, 32],
                                   [54, 33],
@@ -90,4 +97,3 @@ if __name__ == "__main__":
 
     print(central.trackobserver)
     print(s1.tracks_observed)
-    print(s1.is_point_in_fov([20,20]))
