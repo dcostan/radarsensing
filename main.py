@@ -43,14 +43,14 @@ track_1 = {"id": 1, "pos": [[0, 3],
                             [52, 35],
                             [51, 36],
                             [51, 37],
-                            [50, 38]], "start_time": 0 }
+                            [50, 38]], "start_time": 0}
 
 # generate track from (0, 0) to (0, 0.5*5^2) with an additional gaussian noise
 pos_x = np.linspace(start=0, stop=5, num=50).reshape(-1, 1)
 noise = np.random.normal(0, 0.5, 50).reshape(-1, 1)  # mean=0, std=0.5, 50 points
 pos_y = (0.5 * pos_x ** 2 + noise).reshape(-1, 1)
 pos = np.concatenate((pos_x, pos_y), axis=1).tolist()
-track_3 = {"id": 2, "pos": pos, "start_time": 1 }
+track_3 = {"id": 2, "pos": pos, "start_time": 1}
 
 central.add_track(track_0)
 central.add_track(track_1)
@@ -74,7 +74,11 @@ for sensor in sensors:
     R = sensor.R
     t = sensor.t
     for track_id, track in sensor.tracks_observed.items():
-        track_array = (R @ np.asarray(track["pos"]).squeeze().T + t).T  # transform track from radar to abs ref sys
+        pos = np.asarray(track["pos"])
+        if pos.shape == (1, 2):  # handle special case of track with only one point, if not handled after squeeze and transpose the coordinates are switched
+            track_array = (R @ pos.T + t).T  # transform track from radar to abs ref sys
+        else:
+            track_array = (R @ pos.squeeze().T + t).T  # transform track from radar to abs ref sys
         ax.plot(track_array[:, 0], track_array[:, 1], label=f"obs_track-{track_id}")
 
 plt.legend()
