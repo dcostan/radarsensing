@@ -54,9 +54,13 @@ class Central:
         self.tracks = []
         self.timestep = 0
         self.trackobserver = {}
+        self.adjacency_matrix = np.matrix([])
 
     def add_track(self, track):
         self.tracks.append(track)
+
+    def set_adjacency(self, matrix):
+        self.adjacency_matrix = matrix
 
     def generate_next(self):
         self.trackobserver = {}

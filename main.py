@@ -20,6 +20,8 @@ s2 = Sensor(t2, R2, 0, opening=120, range=8)
 sensors = [s1, s2]
 
 central = Central()
+adj_matrix = np.matrix([[1, 0], [0, 1]])
+central.set_adjacency(adj_matrix)
 
 track_0 = {"id": 0, "pos": [[1, 3],
                             [1, 2],
