@@ -5,12 +5,13 @@ import math
 
 class Sensor:
 
-    def __init__(self, t, R, D, opening, range):
+    def __init__(self, t, R, D, opening, range, weight):
         self.t = t
         self.R = R
         self.D = D
         self.opening = opening
         self.range = range
+        self.weight = weight
         self.tracks_observed = {}
 
     def add_point_to_track(self, track_id, point):
@@ -22,22 +23,21 @@ class Sensor:
     def is_point_in_fov(self, point):
         point = np.array(point)
         m1 = math.tan((90 - self.opening) * math.pi / 180)
-        first_straight_condition = (point.flat[1] > m1 * point.flat[0])
+        first_straight_condition = (point[1] > m1 * point[0])
 
         m2 = math.tan((90 + self.opening) * math.pi / 180)
-        second_straight_condition = (point.flat[1] > m2 * point.flat[0])
+        second_straight_condition = (point[1] > m2 * point[0])
 
-        range_condition = np.linalg.norm(point) <= self.range  # TODO: limite sul range?
+        range_condition = np.linalg.norm(point) <= self.range
 
         return first_straight_condition and second_straight_condition and range_condition
 
     def rel_coordinates(self, P_):
         """Transforms point P_ from absolute reference system to the sensor reference system
-
         :param P_: the point to be transformed; the point is assumed to be a column vector.
         :type P_: np.ndarray
         :returns: the transformed point"""
-        # P = self.R @ P_ + [self.t]  # TODO: P = self.R.T @ (P_ - [self.t])
+        # P = self.R @ P_ + [self.t]
         P = self.R.T @ (P_ - self.t)
         return P.squeeze().tolist()
 
@@ -46,18 +46,31 @@ class Sensor:
             P = self.rel_coordinates(trackobserver[track_id]["pos"])
             if self.is_point_in_fov(P):
                 self.add_point_to_track(track_id, P)
+    
+    def init_clustering(self, sensors, adj_matrix):
+        for i in range(len(sensors) - 1):
+            current_index = len(sensors) - 1
+            if adj_matrix[current_index, i]:  # [current_index, i] is the row corresponding to the current sensor index
+                w = sensors[i].weight
+                print("Sensor " + str(current_index) + " is adjacent to sensor " + str(i) + " with weight " + str(w))
 
 
 class Central:
 
     def __init__(self):
         self.tracks = []
+        self.sensors = []
         self.timestep = 0
         self.trackobserver = {}
-        self.adjacency_matrix = np.matrix([])
+        self.adjacency_matrix = np.array([])
 
     def add_track(self, track):
         self.tracks.append(track)
+        
+    def add_sensors(self, sensors):
+        for sensor in sensors:
+            self.sensors.append(sensor)
+            sensor.init_clustering(self.sensors, self.adjacency_matrix)
 
     def set_adjacency(self, matrix):
         self.adjacency_matrix = matrix
@@ -70,22 +83,22 @@ class Central:
                     "pos": np.array(track["pos"][self.timestep - track["start_time"]]).reshape(2, 1)}  # TODO: reshaped to column vector
         self.timestep = self.timestep + 1
 
-    def send_to_sensors(self, sensors):
-        for s in sensors:
+    def send_to_sensors(self):
+        for s in self.sensors:
             s.points_incoming(self.trackobserver)
 
     def abs_coordinates(self, s, P):
-        # P_ = s.R.T @ ( P - [s.t] ).T  # TODO: other way round
+        # P_ = s.R.T @ ( P - [s.t] ).T
         P_ = s.R @ P + s.t
         return np.array(P_)
 
-    def show_room(self, sensors):
+    def show_room(self):
         plt.rcParams["figure.figsize"] = [6.50, 6.50]
         plt.rcParams["figure.autolayout"] = True
 
         fig, ax = plt.subplots()  # this way you create an ax object that you can return and plot on it other things
 
-        for sensor in sensors:
+        for sensor in self.sensors:
             origin = self.abs_coordinates(sensor, np.array([[0], [0]])).flat  # vectors are columns
             limit1 = self.abs_coordinates(sensor, np.array(
                 [[math.cos((90 - (sensor.opening / 2)) * math.pi / 180) * sensor.range],

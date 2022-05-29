@@ -8,20 +8,23 @@ t1 = np.array([-5, 1]).reshape(2, 1)  # position (column vector)
 theta1 = np.deg2rad(-30)  # rotation
 R1 = np.array([[np.cos(theta1), -np.sin(theta1)],
                 [np.sin(theta1), np.cos(theta1)]])
-s1 = Sensor(t1, R1, 0, opening=120, range=8)
+s1 = Sensor(t1, R1, 0, opening=120, range=8, weight=10)
 
 # sensor 2
 theta2 = np.deg2rad(30)  # position (column vector)
 t2 = np.array([5, 2]).reshape(2, 1)  # rotation
 R2 = np.array([[np.cos(theta2), -np.sin(theta2)],
                 [np.sin(theta2), np.cos(theta2)]])
-s2 = Sensor(t2, R2, 0, opening=120, range=8)
+s2 = Sensor(t2, R2, 0, opening=120, range=8, weight=2)
 
 sensors = [s1, s2]
 
 central = Central()
-adj_matrix = np.matrix([[1, 0], [0, 1]])
+
+adj_matrix = np.array([[0, 1], [1, 0]])
 central.set_adjacency(adj_matrix)
+
+central.add_sensors(sensors)
 
 track_0 = {"id": 0, "pos": [[1, 3],
                             [1, 2],
@@ -59,9 +62,9 @@ central.add_track(track_3)
 # run the system for some time
 for i in range(50):
     central.generate_next()
-    central.send_to_sensors(sensors)
+    central.send_to_sensors()
 
-ax = central.show_room([s1, s2]) # when you plot, you plot on an ax object, and you can plot multiple things on the same ax
+ax = central.show_room() # when you plot, you plot on an ax object, and you can plot multiple things on the same ax
 
 # plot all the tracks provided
 for track in central.tracks:
@@ -83,4 +86,3 @@ for sensor in sensors:
 
 plt.legend()
 plt.show()
-
