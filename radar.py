@@ -1,18 +1,26 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import re
 
 
 class Sensor:
 
     def __init__(self, t, R, D, opening, range, weight):
+        # Position variables
         self.t = t
         self.R = R
         self.D = D
         self.opening = opening
         self.range = range
-        self.weight = weight
         self.tracks_observed = {}
+        
+        # DMAC variables
+        self.ID = -1
+        self.Ch = False
+        self.weight = weight
+        self.Cluster = []
+        self.Clusterhead = -1
 
     def add_point_to_track(self, track_id, point):
         if track_id not in self.tracks_observed.keys():
@@ -47,12 +55,42 @@ class Sensor:
             if self.is_point_in_fov(P):
                 self.add_point_to_track(track_id, P)
     
-    def init_clustering(self, sensors, adj_matrix):
+    def find_mw_ch_node(self, sensors, adj_matrix):
+        node = self
         for i in range(len(sensors) - 1):
-            current_index = len(sensors) - 1
-            if adj_matrix[current_index, i]:  # [current_index, i] is the row corresponding to the current sensor index
-                w = sensors[i].weight
-                print("Sensor " + str(current_index) + " is adjacent to sensor " + str(i) + " with weight " + str(w))
+            if adj_matrix[self.ID, i]:    # [self.ID, i] is the row corresponding to the current sensor index
+                if sensors[i].weight > node.weight and sensors[i].Ch:
+                    node = sensors[i]
+        if node == self:
+            return None
+        else:
+            return node
+    
+    def send_message(self, msg, sensors):
+        for sensor in sensors:
+            if sensor.ID != self.ID:
+                sensor.receive_message(msg)
+    
+    def receive_message(self, msg):
+        print(msg)
+        # TBD
+        if bool(re.match(r"JOIN\([0-9]+\,[0-9]+\)", msg)):
+            print("JOIN message")
+    
+    def init_clustering(self, sensors, adj_matrix):
+        self.ID = len(sensors) - 1    # Obtain the current sensor id form adj matrix
+        mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
+        
+        if mw_ch_node != None:
+            msg = "JOIN(" + str(self.ID) + "," + str(mw_ch_node.ID) + ")"
+            self.send_message(msg, sensors)
+            self.Clusterhead = mw_ch_node.ID
+        else:
+            msg = "CH(" + str(self.ID) + ")"
+            self.send_message(msg, sensors)
+            self.Ch = True
+            self.Clusterhead = self.ID
+            self.Cluster.append(self.ID)
 
 
 class Central:
