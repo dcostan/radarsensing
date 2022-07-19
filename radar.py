@@ -69,13 +69,31 @@ class Sensor:
     def send_message(self, msg, sensors):
         for sensor in sensors:
             if sensor.ID != self.ID:
-                sensor.receive_message(msg)
+                sensor.receive_message(msg, sensors)
     
-    def receive_message(self, msg):
+    def receive_message(self, msg, sensors):
         print(msg)
-        # TBD
-        if bool(re.match(r"JOIN\([0-9]+\,[0-9]+\)", msg)):
-            print("JOIN message")
+        
+        if bool(re.match(r"CH\([0-9]+\)", msg)):
+            u = int(re.findall(r'\d+', msg)[0])
+            if sensors[u].weight > sensors[self.Clusterhead].weight:
+                msg = "JOIN(" + str(self.ID) + "," + str(u) + ")"
+                self.send_message(msg, sensors)
+                self.Clusterhead = u
+                if self.Ch:
+                    self.Ch = False
+        
+        elif bool(re.match(r"JOIN\([0-9]+\,[0-9]+\)", msg)):
+            u = int(re.findall(r'\d+', msg)[0])
+            z = int(re.findall(r'\d+', msg)[1])
+            if self.Ch:
+                if z == self.ID:
+                    self.Cluster.append(u)
+                elif u in self.Cluster:
+                    i = self.Cluster.index(u)
+                    self.Cluster.remove(i)
+                    # TBD
+                    
     
     def init_clustering(self, sensors, adj_matrix):
         self.ID = len(sensors) - 1    # Obtain the current sensor id form adj matrix
