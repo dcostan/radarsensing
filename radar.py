@@ -22,11 +22,13 @@ class Sensor:
         self.Cluster = []
         self.Clusterhead = -1
 
+
     def add_point_to_track(self, track_id, point):
         if track_id not in self.tracks_observed.keys():
             self.tracks_observed[track_id] = {"pos": [point]}
         else:
             self.tracks_observed[track_id]["pos"].append(point)
+
 
     def is_point_in_fov(self, point):
         point = np.array(point)
@@ -40,6 +42,7 @@ class Sensor:
 
         return first_straight_condition and second_straight_condition and range_condition
 
+
     def rel_coordinates(self, P_):
         """Transforms point P_ from absolute reference system to the sensor reference system
         :param P_: the point to be transformed; the point is assumed to be a column vector.
@@ -49,11 +52,13 @@ class Sensor:
         P = self.R.T @ (P_ - self.t)
         return P.squeeze().tolist()
 
+
     def points_incoming(self, trackobserver):
         for track_id in trackobserver.keys():
             P = self.rel_coordinates(trackobserver[track_id]["pos"])
             if self.is_point_in_fov(P):
                 self.add_point_to_track(track_id, P)
+    
     
     def find_mw_ch_node(self, sensors, adj_matrix):
         node = self
@@ -66,19 +71,21 @@ class Sensor:
         else:
             return node
     
-    def send_message(self, msg, sensors):
-        for sensor in sensors:
-            if sensor.ID != self.ID:
-                sensor.receive_message(msg, sensors)
     
-    def receive_message(self, msg, sensors):
+    def send_message(self, msg, sensors, adj_matrix):
+        for sensor in sensors:
+            if adj_matrix[self.ID, sensor.ID]:
+                sensor.receive_message(msg, sensors, adj_matrix)
+    
+    
+    def receive_message(self, msg, sensors, adj_matrix):
         print(msg)
         
         if bool(re.match(r"CH\([0-9]+\)", msg)):
             u = int(re.findall(r'\d+', msg)[0])
             if sensors[u].weight > sensors[self.Clusterhead].weight:
                 msg = "JOIN(" + str(self.ID) + "," + str(u) + ")"
-                self.send_message(msg, sensors)
+                self.send_message(msg, sensors, adj_matrix)
                 self.Clusterhead = u
                 if self.Ch:
                     self.Ch = False
@@ -92,23 +99,34 @@ class Sensor:
                 elif u in self.Cluster:
                     i = self.Cluster.index(u)
                     self.Cluster.remove(i)
-                    # TBD
+            elif self.Clusterhead == u:
+                mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
+                if mw_ch_node != None:
+                    msg = "JOIN(" + str(self.ID) + "," + str(mw_ch_node.ID) + ")"
+                    self.send_message(msg, sensors, adj_matrix)
+                    self.Clusterhead = mw_ch_node.ID
+                else:
+                    msg = "CH(" + str(self.ID) + ")"
+                    self.send_message(msg, sensors, adj_matrix)
+                    self.Ch = True
+                    self.Clusterhead = self.ID
+                    self.Cluster = [ self.ID ]
+                
                     
-    
     def init_clustering(self, sensors, adj_matrix):
         self.ID = len(sensors) - 1    # Obtain the current sensor id form adj matrix
         mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
         
         if mw_ch_node != None:
             msg = "JOIN(" + str(self.ID) + "," + str(mw_ch_node.ID) + ")"
-            self.send_message(msg, sensors)
+            self.send_message(msg, sensors, adj_matrix)
             self.Clusterhead = mw_ch_node.ID
         else:
             msg = "CH(" + str(self.ID) + ")"
-            self.send_message(msg, sensors)
+            self.send_message(msg, sensors, adj_matrix)
             self.Ch = True
             self.Clusterhead = self.ID
-            self.Cluster.append(self.ID)
+            self.Cluster = [ self.ID ]
 
 
 class Central:
