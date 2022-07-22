@@ -73,16 +73,12 @@ class Sensor:
     
     
     def send_message(self, msg, sensors, adj_matrix):
-        #print("Sensor " + str(self.ID) + " sending message: " + msg)
-        #print("Sensor " + str(self.ID) + " Ch flag: " + str(self.Ch))
         for sensor in sensors:
             if adj_matrix[self.ID, sensor.ID]:
                 sensor.receive_message(msg, sensors, adj_matrix)
     
     
     def receive_message(self, msg, sensors, adj_matrix):
-        #print("Sensor " + str(self.ID) + " incoming message: " + msg)
-        #print("Sensor " + str(self.ID) + " Ch flag: " + str(self.Ch))
         
         if bool(re.match(r"CH\([0-9]+\)", msg)):
             u = int(re.findall(r'\d+', msg)[0])
@@ -129,6 +125,35 @@ class Sensor:
             self.Clusterhead = self.ID
             self.Cluster = [ self.ID ]
             msg = "CH(" + str(self.ID) + ")"
+            self.send_message(msg, sensors, adj_matrix)
+    
+                    
+    def link_failure(self, u, sensors, adj_matrix):
+
+        if self.Ch and u in self.Cluster:
+            i = self.Cluster.index(u)
+            self.Cluster.remove(i)
+
+        elif self.Clusterhead == u:
+            mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
+            if mw_ch_node != None:
+                self.Clusterhead = mw_ch_node.ID
+                msg = "JOIN(" + str(self.ID) + "," + str(mw_ch_node.ID) + ")"
+                self.send_message(msg, sensors, adj_matrix)
+            else:
+                self.Ch = True
+                self.Clusterhead = self.ID
+                self.Cluster = [ self.ID ]
+                msg = "CH(" + str(self.ID) + ")"
+                self.send_message(msg, sensors, adj_matrix)
+    
+                    
+    def new_link(self, u, sensors, adj_matrix):
+        if sensors[u].Ch and sensors[u].weight > sensors[self.Clusterhead].weight:
+            if self.Ch:
+                self.Ch = False
+            self.Clusterhead = u
+            msg = "JOIN(" + str(self.ID) + "," + str(u) + ")"
             self.send_message(msg, sensors, adj_matrix)
 
 
