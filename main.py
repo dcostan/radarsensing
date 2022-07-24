@@ -84,6 +84,16 @@ for sensor in sensors:
     else:
         print("Sensor " + str(sensor.ID) + " is in the cluster of sensor " + str(sensor.Clusterhead))
 
+adj_matrix = np.array([[0, 0, 0 , 0], [0, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]])
+central.set_adjacency(adj_matrix)
+print(" - ")
+
+for sensor in sensors:
+    if sensor.Ch:
+        print("Sensor " + str(sensor.ID) + " is CH with cluster " + str(sensor.Cluster))
+    else:
+        print("Sensor " + str(sensor.ID) + " is in the cluster of sensor " + str(sensor.Clusterhead))
+
 ax = central.show_room() # when you plot, you plot on an ax object, and you can plot multiple things on the same ax
 
 # plot all the tracks provided

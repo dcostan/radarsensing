@@ -96,8 +96,7 @@ class Sensor:
                 if z == self.ID:
                     self.Cluster.append(u)
                 elif u in self.Cluster:
-                    i = self.Cluster.index(u)
-                    self.Cluster.remove(i)
+                    self.Cluster.remove(u)
             elif self.Clusterhead == u:
                 mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
                 if mw_ch_node != None:
@@ -131,8 +130,7 @@ class Sensor:
     def link_failure(self, u, sensors, adj_matrix):
 
         if self.Ch and u in self.Cluster:
-            i = self.Cluster.index(u)
-            self.Cluster.remove(i)
+            self.Cluster.remove(u)
 
         elif self.Clusterhead == u:
             mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
@@ -175,7 +173,16 @@ class Central:
             sensor.init_clustering(self.sensors, self.adjacency_matrix)
 
     def set_adjacency(self, matrix):
+        if len(self.adjacency_matrix) == len(matrix):
+            for i in range(len(matrix)):
+                for j in range(len(matrix)):
+                    if self.adjacency_matrix[i,j] != matrix[i,j]:
+                        if matrix[i,j]:
+                            self.sensors[i].new_link(j, self.sensors, matrix)
+                        else:
+                            self.sensors[i].link_failure(j, self.sensors, matrix)
         self.adjacency_matrix = matrix
+    
 
     def generate_next(self):
         self.trackobserver = {}
