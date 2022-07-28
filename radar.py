@@ -1,12 +1,16 @@
+from shapely.geometry import Polygon
 import matplotlib.pyplot as plt
 import numpy as np
+import itertools
 import math
 import re
 
 
 class Sensor:
 
-    def __init__(self, t, R, D, opening, range, weight):
+    newid = itertools.count()
+
+    def __init__(self, t, R, D, opening, range):
         # Position variables
         self.t = t
         self.R = R
@@ -16,9 +20,9 @@ class Sensor:
         self.tracks_observed = {}
         
         # DMAC variables
-        self.ID = -1
+        self.ID = next(Sensor.newid)
         self.Ch = False
-        self.weight = weight
+        self.weight = 0
         self.Cluster = []
         self.Clusterhead = -1
 
@@ -94,7 +98,8 @@ class Sensor:
             z = int(re.findall(r'\d+', msg)[1])
             if self.Ch:
                 if z == self.ID:
-                    self.Cluster.append(u)
+                    if u not in self.Cluster:
+                        self.Cluster.append(u)
                 elif u in self.Cluster:
                     self.Cluster.remove(u)
             elif self.Clusterhead == u:
@@ -112,7 +117,6 @@ class Sensor:
                 
                     
     def init_clustering(self, sensors, adj_matrix):
-        self.ID = len(sensors) - 1    # Obtain the current sensor id form adj matrix
         mw_ch_node = self.find_mw_ch_node(sensors, adj_matrix)
         
         if mw_ch_node != None:
@@ -162,6 +166,7 @@ class Central:
         self.sensors = []
         self.timestep = 0
         self.trackobserver = {}
+        self.sensors_polygon = []
         self.adjacency_matrix = np.array([])
 
     def add_track(self, track):
@@ -169,7 +174,12 @@ class Central:
         
     def add_sensors(self, sensors):
         for sensor in sensors:
+            poly = self.calculate_polygon(sensor)
+            self.sensors_polygon.append(poly)
             self.sensors.append(sensor)
+        
+        self.calculate_weight()
+        for sensor in sensors:
             sensor.init_clustering(self.sensors, self.adjacency_matrix)
 
     def set_adjacency(self, matrix):
@@ -200,6 +210,38 @@ class Central:
         # P_ = s.R.T @ ( P - [s.t] ).T
         P_ = s.R @ P + s.t
         return np.array(P_)
+    
+    def calculate_polygon(self, sensor):
+        origin = self.abs_coordinates(sensor, np.array([[0], [0]])).flat  # vectors are columns
+        rotation = np.degrees(
+            np.arctan2(sensor.R[1, 0], sensor.R[0, 0]))  # usando arctan2, tiene conto del quadrante corretto
+        theta_zero = 90 - sensor.opening / 2
+        theta_one = 90 + sensor.opening / 2
+        t = np.linspace(theta_zero + rotation, theta_one + rotation, 360)
+        x_arc = sensor.range * np.cos(np.radians(t)) + origin[0]
+        y_arc = sensor.range * np.sin(np.radians(t)) + origin[1]
+        
+        radar_vertex = []
+        for i in range(len(t)+1):
+            if i == 0:
+                radar_vertex.append( (origin[0], origin[1]) )
+            else:
+                radar_vertex.append( (x_arc[i-1], y_arc[i-1]) )
+        
+        return Polygon(radar_vertex)
+    
+    def calculate_weight(self):
+        adj = np.zeros((len(self.sensors), len(self.sensors)))
+        for i in range(len(self.sensors)):
+            inter_area = 0
+            for j in range(len(self.sensors)):
+                if i != j:
+                    partial_area = self.sensors_polygon[i].intersection(self.sensors_polygon[j]).area
+                    if partial_area > 0:
+                        adj[i][j] = 1
+                    inter_area = inter_area + partial_area
+            self.sensors[i].weight = inter_area
+        self.set_adjacency(adj)
 
     def show_room(self):
         plt.rcParams["figure.figsize"] = [6.50, 6.50]
@@ -207,32 +249,11 @@ class Central:
 
         fig, ax = plt.subplots()  # this way you create an ax object that you can return and plot on it other things
 
-        for sensor in self.sensors:
-            origin = self.abs_coordinates(sensor, np.array([[0], [0]])).flat  # vectors are columns
-            limit1 = self.abs_coordinates(sensor, np.array(
-                [[math.cos((90 - (sensor.opening / 2)) * math.pi / 180) * sensor.range],
-                 [math.sin((90 - (sensor.opening / 2)) * math.pi / 180) * sensor.range]]))
-            limit2 = self.abs_coordinates(sensor, np.array(
-                [[math.cos((90 + (sensor.opening / 2)) * math.pi / 180) * sensor.range],
-                 [math.sin((90 + (sensor.opening / 2)) * math.pi / 180) * sensor.range]]))
-            x_line1 = [origin[0], limit1[0]]
-            y_line1 = [origin[1], limit1[1]]
-            x_line2 = [origin[0], limit2[0]]
-            y_line2 = [origin[1], limit2[1]]
-
-            # rotation = np.degrees(np.arccos(sensor.R.flat[0]))  # TODO: il coseno è simmetrico rispetto all'asse x, quindi dopo 180° l'arccos "torna indietro"
-            rotation = np.degrees(
-                np.arctan2(sensor.R[1, 0], sensor.R[0, 0]))  # usando arctan2, tiene conto del quadrante corretto
-            theta_zero = 90 - sensor.opening / 2
-            theta_one = 90 + sensor.opening / 2
-            t = np.linspace(theta_zero + rotation, theta_one + rotation, 360)
-            x_arc = sensor.range * np.cos(np.radians(t)) + origin[0]
-            y_arc = sensor.range * np.sin(np.radians(t)) + origin[1]
-
-            ax.plot(x_arc, y_arc, 'b')
-            ax.plot(x_line1, y_line1, 'b', linestyle="-")
-            ax.plot(x_line2, y_line2, 'b', linestyle="-")
-            ax.text(origin[0] - 0.015, origin[1] + 0.05, "Radar")
+        for i in range(len(self.sensors)):
+            origin = self.abs_coordinates(self.sensors[i], np.array([[0], [0]])).flat  # vectors are columns
+            x,y = self.sensors_polygon[i].exterior.xy
+            ax.plot(x,y)
+            ax.text(origin[0] - 0.015, origin[1] + 0.05, "Radar " + str(self.sensors[i].ID))
         ax.grid()
         ax.set_xlim(-10, 10)  # for now I limited it this way... can be changed
         ax.set_ylim(0, 20)

@@ -8,36 +8,33 @@ t1 = np.array([-5, 1]).reshape(2, 1)  # position (column vector)
 theta1 = np.deg2rad(-30)  # rotation
 R1 = np.array([[np.cos(theta1), -np.sin(theta1)],
                 [np.sin(theta1), np.cos(theta1)]])
-s1 = Sensor(t1, R1, 0, opening=120, range=8, weight=10)
+s1 = Sensor(t1, R1, 0, opening=120, range=8)
 
 # sensor 2
 theta2 = np.deg2rad(30)  # position (column vector)
 t2 = np.array([5, 2]).reshape(2, 1)  # rotation
 R2 = np.array([[np.cos(theta2), -np.sin(theta2)],
                 [np.sin(theta2), np.cos(theta2)]])
-s2 = Sensor(t2, R2, 0, opening=120, range=8, weight=20)
+s2 = Sensor(t2, R2, 0, opening=120, range=8)
 
 # sensor 3
 theta3 = np.deg2rad(90)  # position (column vector)
 t3 = np.array([7, 12]).reshape(2, 1)  # rotation
 R3 = np.array([[np.cos(theta3), -np.sin(theta3)],
                 [np.sin(theta3), np.cos(theta3)]])
-s3 = Sensor(t3, R3, 0, opening=120, range=8, weight=30)
+s3 = Sensor(t3, R3, 0, opening=120, range=8)
 
 # sensor 4
 theta4 = np.deg2rad(180)  # position (column vector)
 t4 = np.array([-3, 18]).reshape(2, 1)  # rotation
 R4 = np.array([[np.cos(theta4), -np.sin(theta4)],
                 [np.sin(theta4), np.cos(theta4)]])
-s4 = Sensor(t4, R4, 0, opening=120, range=8, weight=40)
+s4 = Sensor(t4, R4, 0, opening=120, range=8)
 
 
 sensors = [s1, s2, s3, s4]
 
 central = Central()
-
-adj_matrix = np.array([[0, 1, 0 , 0], [1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]])
-central.set_adjacency(adj_matrix)
 
 central.add_sensors(sensors)
 
@@ -78,16 +75,6 @@ for i in range(50):
     central.send_to_sensors()
 
 # Debug DMCA
-for sensor in sensors:
-    if sensor.Ch:
-        print("Sensor " + str(sensor.ID) + " is CH with cluster " + str(sensor.Cluster))
-    else:
-        print("Sensor " + str(sensor.ID) + " is in the cluster of sensor " + str(sensor.Clusterhead))
-
-adj_matrix = np.array([[0, 0, 0 , 0], [0, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]])
-central.set_adjacency(adj_matrix)
-print(" - ")
-
 for sensor in sensors:
     if sensor.Ch:
         print("Sensor " + str(sensor.ID) + " is CH with cluster " + str(sensor.Cluster))
