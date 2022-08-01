@@ -3,36 +3,22 @@ import matplotlib.pyplot as plt
 
 from radar import Central, Sensor
 
-# sensor 1
-t1 = np.array([-5, 1]).reshape(2, 1)  # position (column vector)
-theta1 = np.deg2rad(-30)  # rotation
-R1 = np.array([[np.cos(theta1), -np.sin(theta1)],
-                [np.sin(theta1), np.cos(theta1)]])
-s1 = Sensor(t1, R1, 0, opening=120, range=8)
+# sensors data
+sensors = []
 
-# sensor 2
-theta2 = np.deg2rad(30)  # position (column vector)
-t2 = np.array([5, 2]).reshape(2, 1)  # rotation
-R2 = np.array([[np.cos(theta2), -np.sin(theta2)],
-                [np.sin(theta2), np.cos(theta2)]])
-s2 = Sensor(t2, R2, 0, opening=120, range=8)
+sensors_data = [ {"t": [-5, 1] ,  "theta": -30, "opening": 120, "range": 8},
+                 {"t": [5, 2]  ,  "theta": 30 , "opening": 120, "range": 8},
+                 {"t": [7, 12] ,  "theta": 90 , "opening": 120, "range": 8},
+                 {"t": [-3, 18],  "theta": 180, "opening": 120, "range": 8} ]
 
-# sensor 3
-theta3 = np.deg2rad(90)  # position (column vector)
-t3 = np.array([7, 12]).reshape(2, 1)  # rotation
-R3 = np.array([[np.cos(theta3), -np.sin(theta3)],
-                [np.sin(theta3), np.cos(theta3)]])
-s3 = Sensor(t3, R3, 0, opening=120, range=8)
+for s_data in sensors_data:
+    t = np.array(s_data["t"]).reshape(2, 1)  # position (column vector)
+    theta = np.deg2rad(s_data["theta"])  # rotation
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                    [np.sin(theta), np.cos(theta)]])
+    s = Sensor(t, R, 0, opening=s_data["opening"], range=s_data["range"])
+    sensors.append(s)
 
-# sensor 4
-theta4 = np.deg2rad(180)  # position (column vector)
-t4 = np.array([-3, 18]).reshape(2, 1)  # rotation
-R4 = np.array([[np.cos(theta4), -np.sin(theta4)],
-                [np.sin(theta4), np.cos(theta4)]])
-s4 = Sensor(t4, R4, 0, opening=120, range=8)
-
-
-sensors = [s1, s2, s3, s4]
 
 central = Central()
 
@@ -100,6 +86,30 @@ for sensor in sensors:
         else:
             track_array = (R @ pos.squeeze().T + t).T  # transform track from radar to abs ref sys
         ax.plot(track_array[:, 0], track_array[:, 1], label=f"obs_track-{track_id}")
+ax.legend()
 
-plt.legend()
+# plot single radars
+fig2, axs = plt.subplots(1, len(central.sensors), figsize=(len(central.sensors)*2,2.5), facecolor='w', edgecolor='k')
+axs = axs.ravel()
+
+for i in range(len(central.sensors)):
+    t = np.array([0, 0]).reshape(2, 1)
+    R = np.array([[1, 0],
+                  [0, 1]])
+    s = Sensor(t, R, 0, opening=central.sensors[i].opening, range=central.sensors[i].range)
+    polygon = central.calculate_polygon(s)
+    x,y = polygon.exterior.xy
+    axs[i].plot(x,y)
+    axs[i].text(-3, -1.5, "Radar " + str(central.sensors[i].ID))
+    axs[i].grid()
+    axs[i].set_xlim(-10, 10)  # for now I limited it this way... can be changed
+    axs[i].set_ylim(-5, 15)
+    for track_id, track in central.sensors[i].tracks_observed.items():
+        pos = np.asarray(track["pos"])
+        if pos.shape == (1, 2):
+            track_array = pos
+        else:
+            track_array = pos.squeeze()
+        axs[i].plot(track_array[:, 0], track_array[:, 1], label=f"obs_track-{track_id}")
+
 plt.show()
