@@ -36,10 +36,10 @@ class Sensor:
 
     def is_point_in_fov(self, point):
         point = np.array(point)
-        m1 = math.tan((90 - self.opening) * math.pi / 180)
+        m1 = math.tan((90 - self.opening / 2) * math.pi / 180)
         first_straight_condition = (point[1] > m1 * point[0])
 
-        m2 = math.tan((90 + self.opening) * math.pi / 180)
+        m2 = math.tan((90 + self.opening / 2) * math.pi / 180)
         second_straight_condition = (point[1] > m2 * point[0])
 
         range_condition = np.linalg.norm(point) <= self.range
@@ -244,7 +244,7 @@ class Central:
         self.set_adjacency(adj)
 
     def show_room(self):
-        plt.rcParams["figure.figsize"] = [6.50, 6.50]
+        plt.rcParams["figure.figsize"] = [10, 6.66]
         plt.rcParams["figure.autolayout"] = True
 
         fig, ax = plt.subplots()  # this way you create an ax object that you can return and plot on it other things
@@ -255,7 +255,7 @@ class Central:
             ax.plot(x,y)
             ax.text(origin[0] - 0.015, origin[1] + 0.05, "Radar " + str(self.sensors[i].ID))
         ax.grid()
-        ax.set_xlim(-10, 10)  # for now I limited it this way... can be changed
+        ax.set_xlim(-15, 15)  # for now I limited it this way... can be changed
         ax.set_ylim(0, 20)
 
         return ax

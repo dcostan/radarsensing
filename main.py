@@ -6,10 +6,23 @@ from radar import Central, Sensor
 # sensors data
 sensors = []
 
+# data set 1
 sensors_data = [ {"t": [-5, 1] ,  "theta": -30, "opening": 120, "range": 8},
                  {"t": [5, 2]  ,  "theta": 30 , "opening": 120, "range": 8},
                  {"t": [7, 12] ,  "theta": 90 , "opening": 120, "range": 8},
                  {"t": [-3, 18],  "theta": 180, "opening": 120, "range": 8} ]
+
+# data set 2
+sensors_data = [ {"t": [-5, 1] ,  "theta": -15, "opening": 120, "range": 8},
+                 {"t": [8, 2]  ,  "theta": 30 , "opening": 120, "range": 8},
+                 {"t": [7, 15] ,  "theta": 135, "opening": 100, "range": 7},
+                 {"t": [-5, 12],  "theta": 225, "opening": 140, "range": 6} ]
+
+# data set 3
+sensors_data = [ {"t": [-5, 1] ,  "theta": 0  , "opening": 90 , "range": 8},
+                 {"t": [8, 2]  ,  "theta": 30 , "opening": 120, "range": 8},
+                 {"t": [5, 13] ,  "theta": 160, "opening": 100, "range": 9},
+                 {"t": [-8, 12],  "theta": 200, "opening": 110, "range": 6} ]
 
 for s_data in sensors_data:
     t = np.array(s_data["t"]).reshape(2, 1)  # position (column vector)
@@ -34,15 +47,7 @@ track_0 = {"id": 0, "pos": [[7, 1],
                             [2, 8]], "start_time": 0}
 
 track_1 = {"id": 1, "pos": [[0, 3],
-                            [56, 30],
-                            [55, 31],
-                            [55, 32],
-                            [54, 33],
-                            [53, 34],
-                            [52, 35],
-                            [51, 36],
-                            [51, 37],
-                            [50, 38]], "start_time": 0}
+                            [1, 2]], "start_time": 0}
 
 # generate track from (0, 0) to (0, 0.5*5^2) with an additional gaussian noise
 pos_x = np.linspace(start=0, stop=5, num=50).reshape(-1, 1)
