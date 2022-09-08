@@ -15,7 +15,7 @@ sensors_data = [ {"t": [-7, 17] ,  "theta": 180, "opening": 50, "range": 6},
                  {"t": [13, 11] ,  "theta": 90 , "opening": 60, "range": 7},
                  {"t": [-5, 1]  ,  "theta": 0  , "opening": 70, "range": 6},
                  {"t": [-1, 1]  ,  "theta": 0  , "opening": 70, "range": 6} ]
-
+'''
 # data set 2
 sensors_data = [ {"t": [-5, 1] ,  "theta": 0  , "opening": 65, "range": 8},
                  {"t": [-5, 15],  "theta": 180, "opening": 60, "range": 8},
@@ -29,7 +29,7 @@ sensors_data = [ {"t": [0, 1]  ,  "theta": 0  , "opening": 50, "range": 9},
                  {"t": [8, 8]  ,  "theta": 90 , "opening": 50, "range": 9},
                  {"t": [0, 17] ,  "theta": 180, "opening": 50, "range": 9},
                  {"t": [-8, 8] ,  "theta": 270, "opening": 50, "range": 9} ]
-
+'''
 for s_data in sensors_data:
     t = np.array(s_data["t"]).reshape(2, 1)  # position (column vector)
     theta = np.deg2rad(s_data["theta"])  # rotation
@@ -246,11 +246,11 @@ pos = np.concatenate((pos_x, pos_y), axis=1).tolist()
 track_3 = {"id": 2, "pos": pos, "start_time": 1}
 
 #central.add_track(track_0)
-#central.add_track(track_1)
-central.add_track(track_2)
+central.add_track(track_1)
+#central.add_track(track_2)
 
 # run the system for some time
-for i in range(100):
+for i in range(0):
     central.generate_next()
     central.send_to_sensors()
 
@@ -284,27 +284,9 @@ for sensor in sensors:
 ax.legend()
 
 # plot single radars
-fig2, axs = plt.subplots(1, len(central.sensors), figsize=(len(central.sensors)*2,2.0), facecolor='w', edgecolor='k')
-axs = axs.ravel()
+central.show_single_radars()
 
-for i in range(len(central.sensors)):
-    t = np.array([0, 0]).reshape(2, 1)
-    R = np.array([[1, 0],
-                  [0, 1]])
-    s = Sensor(t, R, 0, opening=central.sensors[i].opening, range=central.sensors[i].range)
-    polygon = central.calculate_polygon(s)
-    x,y = polygon.exterior.xy
-    axs[i].plot(x,y)
-    axs[i].text(-3, -1.5, "Radar " + str(central.sensors[i].ID))
-    axs[i].grid()
-    axs[i].set_xlim(-10, 10)  # for now I limited it this way... can be changed
-    axs[i].set_ylim(-5, 15)
-    for track_id, track in central.sensors[i].tracks_observed.items():
-        pos = np.asarray(track["pos"])
-        if pos.shape == (1, 2):
-            track_array = pos
-        else:
-            track_array = pos.squeeze()
-        axs[i].plot(track_array[:, 0], track_array[:, 1], label=f"obs_track-{track_id}")
+# plot topology
+central.show_topology()
 
 plt.show()

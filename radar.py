@@ -259,3 +259,46 @@ class Central:
         ax.set_ylim(0, 20)
 
         return ax
+    
+    def show_single_radars(self):
+        fig2, axs = plt.subplots(1, len(self.sensors), figsize=(len(self.sensors)*2,2.0), facecolor='w', edgecolor='k')
+        axs = axs.ravel()
+
+        for i in range(len(self.sensors)):
+            t = np.array([0, 0]).reshape(2, 1)
+            R = np.array([[1, 0],
+                          [0, 1]])
+            s = Sensor(t, R, 0, opening=self.sensors[i].opening, range=self.sensors[i].range)
+            polygon = self.calculate_polygon(s)
+            x,y = polygon.exterior.xy
+            axs[i].plot(x,y)
+            axs[i].text(-3, -1.5, "Radar " + str(self.sensors[i].ID))
+            axs[i].grid()
+            axs[i].set_xlim(-10, 10)  # for now I limited it this way... can be changed
+            axs[i].set_ylim(-5, 15)
+            for track_id, track in self.sensors[i].tracks_observed.items():
+                pos = np.asarray(track["pos"])
+                if pos.shape == (1, 2):
+                    track_array = pos
+                else:
+                    track_array = pos.squeeze()
+                axs[i].plot(track_array[:, 0], track_array[:, 1], label=f"obs_track-{track_id}")
+    
+    def show_topology(self):
+        plt.rcParams["figure.figsize"] = [10, 6.66]
+        plt.rcParams["figure.autolayout"] = True
+
+        fig, ax = plt.subplots()  # this way you create an ax object that you can return and plot on it other things
+
+        for i in range(len(self.sensors)):
+            origin = self.abs_coordinates(self.sensors[i], np.array([[0], [0]])).flat  # vectors are columns
+            ax.plot(origin[0], origin[1], 'ko', ms=15)
+            #ax.text(origin[0] - 0.015, origin[1] + 0.05, "Radar " + str(self.sensors[i].ID))
+            for j in range(len(self.sensors)):
+                if i != j:
+                    intersection = self.sensors_polygon[i].intersection(self.sensors_polygon[j]).area
+                    if intersection > 0:
+                        origin_j = self.abs_coordinates(self.sensors[j], np.array([[0], [0]])).flat
+                        ax.plot([origin[0], origin_j[0]], [origin[1], origin_j[1]], 'k')
+        ax.set_xlim(-15, 15)
+        ax.set_ylim(0, 20)
